@@ -11,6 +11,23 @@ import comfy.model_management
 from qwen_vl_utils import process_vision_info
 from pathlib import Path
 
+def get_model_path(model_id, search_paths_list):
+    """
+    在给定的路径列表中查找并下载模型。
+    Args:
+        model_id (str): Hugging Face Hub 上的模型 ID (例如 "runwayml/stable-diffusion-v1-5")。
+        search_paths_list (list): 一个包含所有待搜索路径的列表。
+    Returns:
+        str: 找到的本地模型检查点路径。如果未找到，则返回 None。
+    """
+    model_folder_name = os.path.basename(model_id)
+    for base_path in search_paths_list:
+        local_model_path = os.path.join(base_path, model_folder_name)
+        if os.path.isdir(local_model_path):
+            print(f"在以下位置找到模型: {local_model_path}")
+            return local_model_path
+    # 5. 如果遍历完所有路径都没找到
+    return None
 
 class Qwen3_VQA:
     def __init__(self):
@@ -88,6 +105,8 @@ class Qwen3_VQA:
     FUNCTION = "inference"
     CATEGORY = "Comfyui_Qwen3-VL-Instruct"
 
+
+
     def inference(
         self,
         text,
@@ -106,18 +125,30 @@ class Qwen3_VQA:
         if seed != -1:
             torch.manual_seed(seed)
         model_id = f"qwen/{model}"
-        self.model_checkpoint = os.path.join(
-            folder_paths.models_dir, "prompt_generator", os.path.basename(model_id)
-        )
 
-        if not os.path.exists(self.model_checkpoint):
+        paths = folder_paths.get_folder_paths("prompt_generator")
+
+        found_model_path = get_model_path(model_id, paths)
+        if found_model_path:
+            self.model_checkpoint = found_model_path
+            print(f"将使用模型: {self.model_checkpoint}")
+        else:
+            if not paths:
+                raise ValueError("未找到任何 'prompt_generator' 路径。请确保已在配置中设置。")
+            
+            download_target_dir = paths[0]
+            
+            print(f"在搜索路径中未找到模型 '{model_id}'。将在 '{download_target_dir}' 下载。")
+            
             from huggingface_hub import snapshot_download
-
             snapshot_download(
                 repo_id=model_id,
-                local_dir=self.model_checkpoint,
+                local_dir=download_target_dir,
                 local_dir_use_symlinks=False,
             )
+            
+            self.model_checkpoint = os.path.join(download_target_dir, os.path.basename(model_id))
+            print(f"下载完成，模型路径为: {self.model_checkpoint}")
 
         if self.processor is None:
             # The default range for the number of visual tokens per image in the model is 4-16384. You can set min_pixels and max_pixels according to your needs, such as a token count range of 256-1280, to balance speed and memory usage.
