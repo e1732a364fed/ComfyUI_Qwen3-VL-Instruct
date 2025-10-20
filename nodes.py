@@ -26,7 +26,6 @@ def get_model_path(model_id, search_paths_list):
         if os.path.isdir(local_model_path):
             print(f"在以下位置找到模型: {local_model_path}")
             return local_model_path
-    # 5. 如果遍历完所有路径都没找到
     return None
 
 class Qwen3_VQA:
@@ -104,8 +103,6 @@ class Qwen3_VQA:
     RETURN_TYPES = ("STRING",)
     FUNCTION = "inference"
     CATEGORY = "Comfyui_Qwen3-VL-Instruct"
-
-
 
     def inference(
         self,
