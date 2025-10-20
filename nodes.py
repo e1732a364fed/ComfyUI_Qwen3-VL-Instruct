@@ -143,7 +143,7 @@ class Qwen3_VQA:
             from huggingface_hub import snapshot_download
             snapshot_download(
                 repo_id=model_id,
-                local_dir=download_target_dir,
+                local_dir=os.path.join(download_target_dir, os.path.basename(model_id)),
                 local_dir_use_symlinks=False,
             )
             
